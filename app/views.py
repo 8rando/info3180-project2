@@ -134,6 +134,100 @@ def send_text_file(file_name):
     return app.send_static_file(file_dot_text)
 
 
+#   Adding a new post for a user
+@app.route('/api/v1/users/<int:user_id>/posts', methods=['POST'])
+@login_required
+def add_post(user_id):
+    if current_user.id != user_id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    form = PostForm()
+
+    if form.validate_on_submit():
+        photo = form.photo.data
+        filename = secure_filename(photo.filename)
+        photo.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+        new_post = Post(user_id=user_id, caption=form.caption.data, photo=filename, created_on=datetime.now())
+        db.session.add(new_post)
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Post successfully added',
+            'post': {
+                'id': new_post.id,
+                'caption': new_post.caption,
+                'photo': filename,
+                'user_id': user_id,
+                'created_on': new_post.created_on
+            }
+        }), 201
+
+    else:
+        return jsonify({'errors': form_errors(form)}), 400
+    
+#   Returning user's posts
+@app.route('/api/v1/users/<int:user_id>/posts', methods=['GET'])
+def get_user_posts(user_id):
+    #   post or posts???
+    posts = Post.query.filter_by(user_id=user_id).all()
+    posts_list = [{
+        'id': post.id,
+        'caption': post.caption,
+        'photo': post.photo,
+        'created_on': post.created_on.strftime('%Y-%m-%d %H:%M:%S')
+    }for post in posts]
+
+    return jsonify(posts_list), 200
+
+#   Returning all posts for all Users
+@app.route('/api/v1/posts', methods=['GET'])
+def get_all_posts():
+    posts = Post.query.all()
+    post_list = [{
+        'id': post.id,
+        'user_id': post.user_id,
+        'caption': post.caption,
+        'photo': post.photo,
+        'created_on': post.created_on.strftime('%Y-%m-%d %H:%M:%S')
+    }for post in posts]
+
+    return jsonify(post_list), 200
+
+#   Creating a Follow relationship
+@app.route('/api/users/<int:target_id>/follow', methods=['POST'])
+@login_required
+def follow_user(user_id):
+    if current_user.id == target_id:
+        return jsonify({'error': 'You cannot follow yourself'}), 403
+    
+    follow = Follow.query.filter_by(user_id=current_user.id, target_id = target_id).first()
+    if follow:
+        return jsonify({'message': 'Already following this user'}), 409
+    
+    new_follow = Follow(user_id=current_user.id, target_id=target_id)
+    db.session.add(new_follow)
+    db.session.commit()
+
+    return jsonify({'message': 'User followed'}), 201
+
+
+#   Setting a Like on the Current Post by the Logged-in User
+@app.route('/api/v1/posts/<int:post_id>/like', methods=['POST'])
+@login_required
+def like_post(post_id):
+    like = Likes.queery.filter_by(post_id=post_id, user_id=current_user.id).first()
+    if like:
+        db.session.delete(like)
+        db.session.commit()
+        return jsonify({'message': 'Post liked'}), 201
+    else:
+        new_like = Likes(post_id=post_id, user_id=current_user.id)
+        db.session.add(new_like)
+        db.session.commit()
+        return jsonify({'message': 'Post like'}), 201
+    
+
 @app.after_request
 def add_header(response):
     """
