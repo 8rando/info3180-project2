@@ -5,9 +5,17 @@ Werkzeug Documentation:  https://werkzeug.palletsprojects.com/
 This file creates your application.
 """
 
-from app import app
-from flask import render_template, request, jsonify, send_file
-import os
+from app import app, db, login_manager
+from flask import render_template, request, jsonify, send_file,send_from_directory, g
+from werkzeug.utils import secure_filename
+from flask_wtf.csrf import generate_csrf
+from flask_login import login_user, logout_user, current_user, login_required
+from werkzeug.security import check_password_hash
+from app.forms import PostForm, LoginForm, signUpForm, FollowForm
+from app.models import Post, Users, Likes, Follow
+import os,jwt 
+from datetime import datetime, timedelta
+
 
 
 ###
@@ -22,7 +30,88 @@ def index():
 ###
 # The functions below should be applicable to all Flask apps.
 ###
+@app.route('/api/v1/csrf-token', methods=['GET'])
+def get_csrf():
+    return jsonify({'csrf_token': generate_csrf()})
 
+
+
+@app.route("/api/v1/generate-token")
+def generate_token():
+    timestamp = datetime.UTC
+    # do i update to have username and password?
+    payload = {
+        "sub": 1,
+        "iat": timestamp,
+        "exp": timestamp + timedelta(hours=24)
+    }
+    token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
+
+    return token
+
+@app.route('/api/v1/register',methods=["POST"])
+def register():
+    form = signUpForm()
+    if request.method == "POST" and form.validate_on_submit():
+        username =form.username.data
+        password = form.password.data
+        first_name = form.firstName.data
+        last_name = form.lastName.data
+        email = form.email.data
+        location = form.location.data
+        biography = form.biography.data
+        profile_photo = form.photo.data
+        filename = secure_filename(profile_photo.filename)
+        user = Users(username, password, first_name, last_name, email, location, biography, filename)
+        profile_photo.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        db.session.add(user)
+        db.session.commit()
+
+        return jsonify({'message': f"Account was successfully created for {username}!!"})
+    else:
+        db.session.rollback()
+        formErrors = form_errors(form)
+        errors = {
+            "errors": formErrors
+        }
+        return jsonify(errors)
+    
+@app.route('/api/v1/auth/login', methods=['POST'])
+def login():
+    form = LoginForm()
+    message = ''
+    if request.method == "POST":
+        if form.validate_on_submit():
+            # Get the username and password values from the form.
+            username = form.username.data
+            password = form.password.data
+            user = db.session.execute(db.select(Users).filter_by(username=username)).scalar()
+            if user is not None and (check_password_hash(user.password, password)):
+                # Gets user id, load into session
+                login_user(user)
+                message = {'token': generate_token()}
+            else:
+                message = {'errors': ['Username or password not correct']}
+        else:
+            errors = form_errors(form)
+            if (errors):
+                error_list = {"errors": []}
+                error_list['errors'] = errors
+                message = error_list
+      
+        return jsonify(message)  
+        
+   
+
+@app.route("/api/v1/auth/logout", methods=['POST'])
+@login_required
+def logout():
+    
+    logout_user()
+    
+    message = {'success':'Successfully logged out'}
+    
+    return jsonify(message)
 # Here we define a function to collect form errors from Flask-WTF
 # which we can later use
 def form_errors(form):
