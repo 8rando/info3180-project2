@@ -99,7 +99,37 @@ def login():
                 error_list['errors'] = errors
                 message = error_list
       
-        return jsonify(message)  
+        return jsonify(message)
+
+@app.route('/api/v1/currentuser', methods=['GET'])
+def get_user():  
+    response = '' 
+    if current_user.is_authenticated:
+        user = current_user
+        response = {'message': user.get_id()}      
+    else:    
+        response = {'Error': 'User is not logged in'}
+
+    return jsonify(response) 
+
+@app.route('/api/v1/users/<user_id>', methods=['GET'])
+@login_required
+
+def getUserDetails(user_id):
+    user = Users.query.filter_by(id=user_id).first()
+    
+    user_data = {
+        "id": user.id,
+        "username": user.username,
+        "firstname": user.first_name,
+        "lastname": user.last_name,
+        "email": user.email,
+        "location": user.location,
+        "biography": user.biography,
+        "profile_photo": "/api/v1/photos/{}".format(user.profile_photo),
+        "joined_on": user.joined_on
+    }
+    return jsonify(user_data) 
         
    
 
@@ -211,12 +241,33 @@ def follow_user(user_id):
 
     return jsonify({'message': 'User followed'}), 201
 
+@app.route('/api/v1/users/<user_id>/follow', methods=['GET'])
+@login_required
+#@requires_auth
+def getFollowers(user_id):
+    
+    if request.method == 'GET':
+        
+        # count = 0
+    
+        followers = Follow.query.filter_by(target_id=user_id).all()
+        followers_list = []
+
+        for follow in followers:
+            # count += 1
+            followers_list.append(follow_user.user_id)
+            
+        
+        
+        data = {"followers": followers_list}
+        return jsonify(data)
+
 
 #   Setting a Like on the Current Post by the Logged-in User
 @app.route('/api/v1/posts/<int:post_id>/like', methods=['POST'])
 @login_required
 def like_post(post_id):
-    like = Likes.queery.filter_by(post_id=post_id, user_id=current_user.id).first()
+    like = Likes.query.filter_by(post_id=post_id, user_id=current_user.id).first()
     if like:
         db.session.delete(like)
         db.session.commit()
