@@ -1,15 +1,15 @@
 <script setup>
-import Home from '@/components/Home.vue';
+import NewPost from '@/components/NewPost.vue';
 </script>
 
 <template>
-    <Home />
+    <NewPost />
 </template>
 
 <script>
 export default {
   components: {
-    Home
+    NewPost
   }
 }
 </script>

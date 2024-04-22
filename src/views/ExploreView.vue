@@ -1,15 +1,15 @@
 <script setup>
-import Home from '@/components/Home.vue';
+import Explore from '../components/Explore.vue';
 </script>
 
 <template>
-    <Home />
+    <Explore />
 </template>
 
 <script>
 export default {
   components: {
-    Home
+    Explore
   }
 }
 </script>
