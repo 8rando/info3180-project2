@@ -8,17 +8,12 @@ export default {
   },
   methods: {
     handlePhotoUpload(event) {
-      // Handle photo upload logic here
-      // For example, you can access the selected file using event.target.files[0]
       const file = event.target.files[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          this.imageSrc = e.target.result as string;
-        };
-        reader.readAsDataURL(file);
+        this.imageSrc = URL.createObjectURL(file);
       }
     }
+  }
 }
 </script>
 
