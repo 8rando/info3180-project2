@@ -1,15 +1,13 @@
-<script setup>
-import Register from '../components/Register.vue';
-</script>
-
-<template>
-    <Register />
-</template>
-
 <script>
+import Register from '../components/Register.vue';
+
 export default {
   components: {
     Register
   }
 }
 </script>
+
+<template>
+  <Register />
+</template>

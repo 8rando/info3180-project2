@@ -1,6 +1,6 @@
 import os
 from flask import Flask
-
+from flask_cors import CORS
 from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 from .config import Config
@@ -8,6 +8,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_migrate import Migrate
 
 app = Flask(__name__)
+CORS(app)
 app.config.from_object(Config)
 
 csrf= CSRFProtect(app)

@@ -2,7 +2,7 @@
 from sqlalchemy import Unicode
 from . import db
 from werkzeug.security import generate_password_hash
-import datetime
+from datetime import datetime, timedelta
 
 class Users(db.Model):
     
@@ -17,7 +17,7 @@ class Users(db.Model):
     location = db.Column(db.String(250))
     biography = db.Column(db.String(250))
     profile_photo = db.Column(db.String(100))
-    joined_on = db.Column(db.DateTime, default=datetime.UTC)
+    joined_on = db.Column(db.DateTime, default=datetime.utcnow())
     
     
     def __init__(self, username, password, first_name, last_name, 
@@ -59,7 +59,7 @@ class Post(db.Model):
     caption = db.Column(db.String(2000))
     photo = db.Column(db.String(250))
     user_id = db.Column(db.Integer)
-    created_on = db.Column(db.DateTime, default=datetime.UTC)
+    created_on = db.Column(db.DateTime, default=datetime.utcnow())
 
     def __init__(self, caption, photo, user_id):
         self.caption = caption

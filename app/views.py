@@ -38,7 +38,7 @@ def get_csrf():
 
 @app.route("/api/v1/generate-token")
 def generate_token():
-    timestamp = datetime.UTC
+    timestamp = datetime.utcnow()
     # do i update to have username and password?
     payload = {
         "sub": 1,
