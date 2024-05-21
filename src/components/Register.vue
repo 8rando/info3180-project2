@@ -33,7 +33,6 @@
       <div class="form-group">
         <label for="photo">Photo</label>
         <input id="photo" type="file" accept="image/jpeg,image/png" @change="handlePhotoUpload" required>
-        <!-- Optional: display uploaded image -->
         <img :src="imageSrc" alt="Uploaded image preview">
       </div>
       <button type="submit" class="register-button">Register</button>
@@ -42,6 +41,8 @@
 </template>
 
 <script lang="ts">
+import { getCsrfToken } from '../services/cstfService';
+
 export default {
   name: 'Register',
   data() {
@@ -68,34 +69,58 @@ export default {
       }
     },
     async submitForm() {
-      const formData = new FormData();
-      Object.keys(this.formData).forEach(key => {
-        formData.append(key, this.formData[key]);
-      });
+      const csrfToken = getCsrfToken();
+      // console.log(csrfToken)
+      const formData = { ...this.formData };
+      delete formData.photo; // Remove photo from JSON data
+
+      // Convert image file to Base64
+      const photoFile = this.formData.photo;
+      const base64Photo = await this.convertToBase64(photoFile);
+      formData.photo = base64Photo;
 
       try {
         const response = await fetch('http://127.0.0.1:8000/api/v1/register', {
           method: 'POST',
-          body: formData,
           headers: {
-            // 'Content-Type': 'multipart/form-data' // not needed as FormData does it
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken,
           },
+          body: JSON.stringify(formData),
+          credentials: 'include'  // Ensure cookies are included
         });
-        const result = await response.json();
-        if (response.ok) {
-          alert('Registration successful!');
-          console.log(result);
+
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+          const result = await response.json();
+          if (response.ok) {
+            alert('Registration successful!');
+            console.log(result);
+          } else {
+            console.error('Registration failed:', result);
+            alert('Registration failed. See console for errors.');
+          }
         } else {
-          console.error('Registration failed:', result);
-          alert('Registration failed. See console for errors.');
+          console.error('Unexpected non-JSON response:', await response.text());
+          alert('An error occurred. Please check the console for details.');
         }
       } catch (error) {
         console.error('Error submitting form:', error);
       }
+    },
+    convertToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
     }
   }
 }
 </script>
+
+
 
 <style>
 .registration {

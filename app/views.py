@@ -49,32 +49,39 @@ def generate_token():
 
     return token
 
-@app.route('/api/v1/register',methods=["POST"])
-def register():
-    form = signUpForm()
-    if request.method == "POST" and form.validate_on_submit():
-        username =form.username.data
-        password = form.password.data
-        first_name = form.firstName.data
-        last_name = form.lastName.data
-        email = form.email.data
-        location = form.location.data
-        biography = form.biography.data
-        profile_photo = form.photo.data
-        filename = secure_filename(profile_photo.filename)
-        user = Users(username, password, first_name, last_name, email, location, biography, filename)
-        profile_photo.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        db.session.add(user)
-        db.session.commit()
 
-        return jsonify({'message': f"Account was successfully created for {username}!!"})
+@app.route('/api/v1/register', methods=["POST"])
+def register():
+    data = request.json
+    form = signUpForm(data=data)
+    if form.validate():
+        try:
+            username = data['username']
+            password = data['password']
+            first_name = data['firstName']
+            last_name = data['lastName']
+            email = data['email']
+            location = data['location']
+            biography = data['biography']
+            photo_data = data['photo']
+            filename = secure_filename(f"{username}_profile_photo.jpg")
+            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            
+            # Decode the base64 image and save it
+            with open(photo_path, "wb") as fh:
+                fh.write(base64.decodebytes(photo_data.split(",")[1].encode()))
+
+            user = Users(username, password, first_name, last_name, email, location, biography, filename)
+            db.session.add(user)
+            db.session.commit()
+            return jsonify({'message': f"Account was successfully created for {username}!!"})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'error': str(e)}), 400
     else:
-        db.session.rollback()
         formErrors = form_errors(form)
-        errors = {
-            "errors": formErrors
-        }
-        return jsonify(errors)
+        return jsonify({"errors": formErrors}), 400
+
     
 @app.route('/api/v1/auth/login', methods=['POST'])
 def login():
